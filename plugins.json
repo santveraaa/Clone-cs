@@ -1,0 +1,62 @@
+[
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=www.dailymotion.com&sz=%size%",
+        "jarFileSize": 46616,
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/santveraaa/Clone-cs",
+        "fileSize": 10774,
+        "status": 1,
+        "authors": [
+            "Luna712"
+        ],
+        "tvTypes": [
+            "Others"
+        ],
+        "version": 3,
+        "internalName": "DailymotionProvider",
+        "jarUrl": "https://raw.githubusercontent.com/santveraaa/Clone-cs/builds/DailymotionProvider.jar",
+        "description": "Watch content from Dailymotion",
+        "url": "https://raw.githubusercontent.com/santveraaa/Clone-cs/builds/DailymotionProvider.cs3",
+        "name": "DailymotionProvider"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=invidious.io&sz=%size%",
+        "jarFileSize": 59102,
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/santveraaa/Clone-cs",
+        "fileSize": 12922,
+        "status": 1,
+        "authors": [
+            "Cloudburst"
+        ],
+        "tvTypes": [
+            "Others"
+        ],
+        "version": 8,
+        "internalName": "InvidiousProvider",
+        "jarUrl": "https://raw.githubusercontent.com/santveraaa/Clone-cs/builds/InvidiousProvider.jar",
+        "description": "Watch content from any invidious instance",
+        "url": "https://raw.githubusercontent.com/santveraaa/Clone-cs/builds/InvidiousProvider.cs3",
+        "name": "InvidiousProvider"
+    },
+    {
+        "iconUrl": "https://www.google.com/s2/favicons?domain=twitch.tv&sz=%size%",
+        "jarFileSize": 54570,
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/santveraaa/Clone-cs",
+        "fileSize": 13672,
+        "status": 1,
+        "authors": [
+            "CranberrySoup"
+        ],
+        "tvTypes": [
+            "Live"
+        ],
+        "version": 2,
+        "internalName": "TwitchProvider",
+        "jarUrl": "https://raw.githubusercontent.com/santveraaa/Clone-cs/builds/TwitchProvider.jar",
+        "description": "Watch livestreams from Twitch",
+        "url": "https://raw.githubusercontent.com/santveraaa/Clone-cs/builds/TwitchProvider.cs3",
+        "name": "TwitchProvider"
+    }
+]
