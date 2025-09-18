@@ -24,7 +24,7 @@ open class Dramaid : MainAPI() {
     override var name = "DramaId"
     override val hasMainPage = true
     override var lang = "id"
-    override val supportedTypes = setOf(TvType.AsianDrama)
+    override val supportedTypes = setOf(TvType.AsianDrama, TvType.Movie)
 
     companion object {
         fun getStatus(t: String): ShowStatus {
@@ -60,14 +60,19 @@ open class Dramaid : MainAPI() {
 
     private fun getProperDramaLink(uri: String): String {
         return if (uri.contains("-episode-")) {
-            "$mainUrl/series/" + Regex("$mainUrl/(.+)-ep.+").find(uri)?.groupValues?.get(1)
+            val match = Regex("$mainUrl/(.+)-ep.+").find(uri)
+            if (match != null && match.groupValues.size > 1) {
+                "$mainUrl/series/${match.groupValues[1]}"
+            } else {
+                uri
+            }
         } else {
             uri
         }
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val href = getProperDramaLink(this.selectFirst("a.tip")!!.attr("href"))
+        val href = getProperDramaLink(this.selectFirst("a.tip")?.attr("href") ?: return null)
         val title = this.selectFirst("h2[itemprop=headline]")?.text()?.trim() ?: return null
         val posterUrl = fixUrlNull(this.select("img:last-child").attr("src"))
 
@@ -91,8 +96,8 @@ open class Dramaid : MainAPI() {
         val tags = document.select(".genxed > a").map { it.text() }
         val type = document.selectFirst(".info-content .spe span:contains(Tipe:)")?.ownText()
         val year = Regex("\\d, ([0-9]*)").find(
-            document.selectFirst(".info-content > .spe > span > time")!!.text().trim()
-        )?.groupValues?.get(1).toString().toIntOrNull()
+            document.selectFirst(".info-content > .spe > span > time")?.text()?.trim() ?: ""
+        )?.groupValues?.get(1)?.toIntOrNull()
         val status = getStatus(
             document.select(".info-content > .spe > span:nth-child(1)")
                 .text().trim().replace("Status: ", "")
@@ -102,16 +107,16 @@ open class Dramaid : MainAPI() {
         val episodes = document.select(".eplister > ul > li").mapNotNull { episodeElement ->
             val anchor = episodeElement.selectFirst("a") ?: return@mapNotNull null
             val link = fixUrl(anchor.attr("href"))
-            val episodeTitle = episodeElement.selectFirst("a > .epl-title")?.text() ?: anchor.text() // Full title
+            val episodeTitle = episodeElement.selectFirst("a > .epl-title")?.text() ?: anchor.text()
 
             val episodeNumber = Regex("""(?:Episode|Eps)\s*(\d+)""", RegexOption.IGNORE_CASE)
                 .find(episodeTitle)
                 ?.groupValues
                 ?.getOrNull(1)
                 ?.toIntOrNull()
-            newEpisode(link) { // 'link' is the 'data' argument
-                this.name = episodeTitle          // Set the 'name' property (full title)
-                this.episode = episodeNumber      // Set the 'episode' property (the parsed number)
+            newEpisode(link) {
+                this.name = episodeTitle
+                this.episode = episodeNumber
             }
         }.reversed()
 
@@ -133,7 +138,6 @@ open class Dramaid : MainAPI() {
             this.tags = tags
             this.recommendations = recommendations
         }
-
     }
 
     private data class Sources(
@@ -157,38 +161,40 @@ open class Dramaid : MainAPI() {
         sourceCallback: (ExtractorLink) -> Unit
     ) {
         val server = app.get(url).document.selectFirst(".picasa")?.nextElementSibling()?.data()
+            ?: return
 
-        val source = "[${server!!.substringAfter("sources: [").substringBefore("],")}]".trimIndent()
-        val trackers = server.substringAfter("tracks:[").substringBefore("],")
+        val sourceText = server.substringAfter("sources: [").substringBefore("],")
+        val source = "[$sourceText]"
+        val trackersText = server.substringAfter("tracks:[").substringBefore("],")
             .replace("//language", "")
             .replace("file", "\"file\"")
             .replace("label", "\"label\"")
-            .replace("kind", "\"kind\"").trimIndent()
+            .replace("kind", "\"kind\"")
+        val trackers = "[$trackersText]"
 
-        tryParseJson<List<Sources>>(source)?.map {
+        tryParseJson<List<Sources>>(source)?.forEach { sourceItem ->
             sourceCallback(
-                newExtractorLink( // PERUBAHAN DI SINI: Menggunakan newExtractorLink
+                ExtractorLink(
                     name,
                     "Drive",
-                    fixUrl(it.file),
-                    referer = "https://motonews.club/",
-                    quality = getQualityFromName(it.label),
-                    isM3u8 = false,
-                    headers = mapOf(),
-                    extractorData = null
+                    fixUrl(sourceItem.file),
+                    "https://motonews.club/",
+                    getQualityFromName(sourceItem.label),
+                    sourceItem.type.equals("hls", true),
+                    emptyMap(),
+                    null
                 )
             )
         }
 
-        tryParseJson<Tracks>(trackers)?.let {
+        tryParseJson<List<Tracks>>(trackers)?.forEach { track ->
             subCallback.invoke(
                 SubtitleFile(
-                    if (it.label.contains("Indonesia")) "${it.label}n" else it.label,
-                    it.file
+                    if (track.label.contains("Indonesia")) "${track.label}n" else track.label,
+                    track.file
                 )
             )
         }
-
     }
 
     override suspend fun loadLinks(
@@ -199,25 +205,32 @@ open class Dramaid : MainAPI() {
     ): Boolean {
         val document = app.get(data).document
         val sources = document.select(".mobius > .mirror > option").mapNotNull {
-            fixUrl(Jsoup.parse(base64Decode(it.attr("value"))).select("iframe").attr("src"))
+            val value = it.attr("value")
+            if (value.isNotBlank()) {
+                try {
+                    fixUrl(Jsoup.parse(base64Decode(value)).select("iframe").attr("src"))
+                } catch (e: Exception) {
+                    null
+                }
+            } else {
+                null
+            }
         }
 
-        sources.map {
-            it.replace("https://ndrama.xyz", "https://www.fembed.com")
-        }.apmap {
+        sources.map { source ->
+            source.replace("https://ndrama.xyz", "https://www.fembed.com")
+        }.forEach { processedSource ->
             when {
-                it.contains("motonews") -> invokeDriveSource(
-                    it,
-                    this.name,
+                processedSource.contains("motonews") -> invokeDriveSource(
+                    processedSource,
+                    name,
                     subtitleCallback,
                     callback
                 )
-
-                else -> loadExtractor(it, "$mainUrl/", subtitleCallback, callback)
+                else -> loadExtractor(processedSource, "$mainUrl/", subtitleCallback, callback)
             }
         }
 
         return true
     }
-
 }
