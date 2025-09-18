@@ -2,12 +2,22 @@ package com.dramaid
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
+import com.lagradost.cloudstream3.plugins.Plugin
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+import android.content.Context
+
+@CloudstreamPlugin
+class DramaidPlugin : Plugin() {
+    override fun load(context: Context) {
+        registerMainAPI(Dramaid())
+    }
+}
 
 open class Dramaid : MainAPI() {
     override var mainUrl = "https://dramaid.nl"
@@ -157,12 +167,15 @@ open class Dramaid : MainAPI() {
 
         tryParseJson<List<Sources>>(source)?.map {
             sourceCallback(
-                ExtractorLink(
+                newExtractorLink( // PERUBAHAN DI SINI: Menggunakan newExtractorLink
                     name,
                     "Drive",
                     fixUrl(it.file),
                     referer = "https://motonews.club/",
-                    quality = getQualityFromName(it.label)
+                    quality = getQualityFromName(it.label),
+                    isM3u8 = false,
+                    headers = mapOf(),
+                    extractorData = null
                 )
             )
         }
@@ -208,4 +221,3 @@ open class Dramaid : MainAPI() {
     }
 
 }
-
