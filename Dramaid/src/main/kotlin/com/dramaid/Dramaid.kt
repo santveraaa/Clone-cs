@@ -164,15 +164,13 @@ class Dramaid : MainAPI() {
 
         tryParseJson<List<Sources>>(source)?.forEach { sourceItem ->
             sourceCallback(
-                newExtractorLink(
+                ExtractorLink(
                     name,
                     "Drive",
                     fixUrl(sourceItem.file),
                     "https://motonews.club/",
                     getQualityFromName(sourceItem.label),
-                    sourceItem.type.equals("hls", true),
-                    emptyMap(),
-                    null
+                    sourceItem.type.equals("hls", true)
                 )
             )
         }
